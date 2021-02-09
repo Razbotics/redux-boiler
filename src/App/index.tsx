@@ -3,41 +3,41 @@ import React, {
   FormEvent,
   useEffect,
   useRef,
-  useState
+  useState,
 } from "react";
-import { v1 as uuid } from "uuid";
-import { Todo } from "../type";
+import { State } from "../type";
+import { useSelector, useDispatch } from "react-redux";
 import "./App.css";
+// import {
+//   createTodoActionCreator,
+//   selectTodoActionCreator,
+//   toggleTodoActionCreator,
+//   deleteTodoActionCreator,
+//   editTodoActionCreator,
+// } from "../redux-og";
 
-const todos: Todo[] = [
-  {
-    id: uuid(),
-    desc: "Learn React",
-    isComplete: true
-  },
-  {
-    id: uuid(),
-    desc: "Learn Redux",
-    isComplete: true
-  },
-  {
-    id: uuid(),
-    desc: "Learn Redux-ToolKit",
-    isComplete: false
-  }
-];
-
-const selectedTodoId = todos[1].id;
-const editedCount = 0;
+import {
+  createTodoActionCreator,
+  selectTodoActionCreator,
+  toggleTodoActionCreator,
+  deleteTodoActionCreator,
+  editTodoActionCreator,
+} from "../redux-tk";
 
 const App = function() {
+  const dispatch = useDispatch();
+  const todos = useSelector((state: State) => state.todos);
+  const selectedTodoId = useSelector((state: State) => state.selectedTodo);
+  const editedCount = useSelector((state: State) => state.counter);
+
   const [newTodoInput, setNewTodoInput] = useState<string>("");
   const [editTodoInput, setEditTodoInput] = useState<string>("");
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const editInput = useRef<HTMLInputElement>(null);
 
-  const selectedTodo =
-    (selectedTodoId && todos.find(todo => todo.id === selectedTodoId)) || null;
+  const selectedTodo = selectedTodoId
+    ? todos.find((todo) => todo.id === selectedTodoId)
+    : null;
 
   const handleNewInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setNewTodoInput(e.target.value);
@@ -49,9 +49,14 @@ const App = function() {
 
   const handleCreateNewTodo = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
+    if (!newTodoInput.length) return;
+    dispatch(createTodoActionCreator({ desc: newTodoInput }));
+    setNewTodoInput("");
   };
 
-  const handleSelectTodo = (todoId: string) => (): void => {};
+  const handleSelectTodo = (todoId: string) => (): void => {
+    dispatch(selectTodoActionCreator({ id: todoId }));
+  };
 
   const handleEdit = (): void => {
     if (!selectedTodo) return;
@@ -68,6 +73,15 @@ const App = function() {
 
   const handleUpdate = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
+    if (selectedTodoId) {
+      dispatch(
+        editTodoActionCreator({
+          id: selectedTodoId,
+          desc: editTodoInput,
+        })
+      );
+      setIsEditMode(false);
+    }
   };
 
   const handleCancelUpdate = (
@@ -80,10 +94,17 @@ const App = function() {
 
   const handleToggle = (): void => {
     if (!selectedTodoId || !selectedTodo) return;
+    dispatch(
+      toggleTodoActionCreator({
+        id: selectedTodoId,
+        isComplete: !selectedTodo.isComplete,
+      })
+    );
   };
 
   const handleDelete = (): void => {
     if (!selectedTodoId) return;
+    dispatch(deleteTodoActionCreator({ id: selectedTodoId }));
   };
 
   return (
@@ -118,7 +139,8 @@ const App = function() {
         </ul>
         <div className="App_todo-info">
           <h2>Selected Todo:</h2>
-          {selectedTodo === null ? (
+
+          {!selectedTodoId ? (
             <span className="empty-state">No Todo Selected</span>
           ) : !isEditMode ? (
             <>
@@ -127,7 +149,7 @@ const App = function() {
                   selectedTodo?.isComplete ? "done" : ""
                 }`}
               >
-                {selectedTodo.desc}
+                {selectedTodo?.desc}
               </span>
               <div className="todo-actions">
                 <button onClick={handleEdit}>Edit</button>
